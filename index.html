@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Combiner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .pdf-item {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .dark .pdf-preview {
+            filter: invert(0.9) hue-rotate(180deg);
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #5D5CDE;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .dark .loading-spinner {
+            border-color: rgba(30, 30, 30, 0.3);
+            border-top-color: #5D5CDE;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-primary">PDF Combiner</h1>
+        
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+            <div id="dropZone" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg py-8 px-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-primary mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p class="text-lg font-medium mb-2">Click to select PDF files</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">or drag and drop files here</p>
+                <input type="file" id="fileInput" accept=".pdf" multiple class="hidden">
+                <button id="selectFilesBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition duration-300">
+                    Select PDF Files
+                </button>
+            </div>
+        </div>
+        
+        <div id="fileList" class="mb-8 hidden">
+            <h2 class="text-xl font-semibold mb-4">Selected Files</h2>
+            <div id="selectedFiles" class="space-y-3 mb-6"></div>
+            
+            <div class="flex flex-wrap gap-3 justify-center mt-6">
+                <button id="combineBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Combine PDFs
+                </button>
+                <button id="clearBtn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition duration-300">
+                    Clear All
+                </button>
+            </div>
+        </div>
+        
+        <div id="progressContainer" class="hidden mb-8">
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-2">
+                <div id="progressBar" class="bg-primary h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="progressText" class="text-sm text-center">Processing: 0%</p>
+        </div>
+        
+        <div id="resultContainer" class="hidden">
+            <h2 class="text-xl font-semibold mb-4">Combined PDF</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+                <div id="pdfViewer" class="w-full h-[500px] border border-gray-300 dark:border-gray-600 rounded-lg overflow-auto mb-4 bg-white dark:bg-gray-700">
+                    <div id="pdfCanvasContainer" class="flex flex-col items-center p-4">
+                        <!-- PDF pages will be rendered here -->
+                        <p id="loadingText" class="text-center py-8 flex items-center">
+                            <span class="loading-spinner mr-3"></span>
+                            Loading PDF...
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <a id="downloadBtn" href="#" class="flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download PDF
+                    </a>
+                    <button id="printBtn" class="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Detect dark mode
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Initialize variables
+        // Initialize PDF.js
+const pdfjsLib = window.pdfjsLib;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        const PDFLib = window.PDFLib;
+
+        const fileInput = document.getElementById('fileInput');
+        const selectFilesBtn = document.getElementById('selectFilesBtn');
+        const fileList = document.getElementById('fileList');
+        const selectedFiles = document.getElementById('selectedFiles');
+        const combineBtn = document.getElementById('combineBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const resultContainer = document.getElementById('resultContainer');
+
+        let pdfFiles = [];
+        let pdfOrder = [];
+        let currentPdfUrl = null; // Store the URL of the combined PDF
+
+        // Event listeners
+        selectFilesBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelection);
+        clearBtn.addEventListener('click', clearFiles);
+        combineBtn.addEventListener('click', combinePDFs);
+        
+        // Set up print and open tab buttons
+        document.getElementById('printBtn').addEventListener('click', () => {
+            if (currentPdfUrl) {
+                window.open(currentPdfUrl, '_blank', 'noopener,noreferrer');
+            }
+        });
+
+        // Handle file selection
+        function handleFileSelection(e) {
+            const newFiles = Array.from(e.target.files).filter(file => file.type === 'application/pdf');
+            
+            if (newFiles.length === 0) return;
+
+            // Add new files to the list
+            pdfFiles = [...pdfFiles, ...newFiles];
+            pdfOrder = [...pdfOrder, ...newFiles.map((_, i) => pdfFiles.length - newFiles.length + i)];
+            
+            // Show file list
+            fileList.classList.remove('hidden');
+            
+            // Update UI
+            updateFileList();
+        }
+
+        // Update the file list UI
+        function updateFileList() {
+            selectedFiles.innerHTML = '';
+            
+            if (pdfFiles.length === 0) {
+                fileList.classList.add('hidden');
+                return;
+            }
+            
+            pdfOrder.forEach((index, orderIndex) => {
+                const file = pdfFiles[index];
+                
+                const fileItem = document.createElement('div');
+                fileItem.className = 'flex flex-wrap items-center bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm pdf-item';
+                fileItem.innerHTML = `
+                    <div class="flex items-center flex-grow min-w-0 mr-2">
+                        <span class="bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-200 p-2 rounded-md mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium truncate">${file.name}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${formatFileSize(file.size)}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 mt-2 sm:mt-0">
+                        <div class="flex">
+                            <button class="move-up-btn p-1 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary rounded-full ${orderIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${orderIndex === 0 ? 'disabled' : ''}>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                                </svg>
+                            </button>
+                            <button class="move-down-btn p-1 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary rounded-full ${orderIndex === pdfOrder.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${orderIndex === pdfOrder.length - 1 ? 'disabled' : ''}>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="remove-btn p-1 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                
+                const removeBtn = fileItem.querySelector('.remove-btn');
+                removeBtn.addEventListener('click', () => removeFile(orderIndex));
+                
+                const moveUpBtn = fileItem.querySelector('.move-up-btn');
+                if (orderIndex > 0) {
+                    moveUpBtn.addEventListener('click', () => moveFile(orderIndex, orderIndex - 1));
+                }
+                
+                const moveDownBtn = fileItem.querySelector('.move-down-btn');
+                if (orderIndex < pdfOrder.length - 1) {
+                    moveDownBtn.addEventListener('click', () => moveFile(orderIndex, orderIndex + 1));
+                }
+                
+                selectedFiles.appendChild(fileItem);
+            });
+            
+            // Enable/disable combine button
+            combineBtn.disabled = pdfFiles.length < 2;
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Remove a file
+        function removeFile(orderIndex) {
+            const fileIndex = pdfOrder[orderIndex];
+            pdfOrder = pdfOrder.filter((_, i) => i !== orderIndex);
+            pdfFiles = pdfFiles.filter((_, i) => i !== fileIndex);
+            
+            // Update order indices to account for the removed file
+            pdfOrder = pdfOrder.map(index => index > fileIndex ? index - 1 : index);
+            
+            updateFileList();
+        }
+
+        // Move a file in the order
+        function moveFile(fromIndex, toIndex) {
+            const temp = pdfOrder[fromIndex];
+            pdfOrder[fromIndex] = pdfOrder[toIndex];
+            pdfOrder[toIndex] = temp;
+            updateFileList();
+        }
+
+        // Clear all files
+        function clearFiles() {
+            pdfFiles = [];
+            pdfOrder = [];
+            fileInput.value = '';
+            fileList.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            updateFileList();
+        }
+
+        // Combine PDFs
+        async function combinePDFs() {
+            try {
+                // Show progress bar
+                progressContainer.classList.remove('hidden');
+                resultContainer.classList.add('hidden');
+                
+                // Create a new PDF document
+                const mergedPdf = await PDFLib.PDFDocument.create();
+                
+                // Process each PDF file in order
+                for (let i = 0; i < pdfOrder.length; i++) {
+                    const fileIndex = pdfOrder[i];
+                    const file = pdfFiles[fileIndex];
+                    
+                    // Update progress
+                    const progress = Math.round((i / pdfOrder.length) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `Processing: ${progress}%`;
+                    
+                    // Read the file as ArrayBuffer
+                    const arrayBuffer = await readFileAsArrayBuffer(file);
+                    
+                    // Load the PDF
+                    const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+                    
+                    // Copy all pages
+                    const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    
+                    // Add pages to the new document
+                    pages.forEach((page) => {
+                        mergedPdf.addPage(page);
+                    });
+                }
+                
+                // Complete progress
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Processing: 100%';
+                
+                // Save the merged PDF
+                const mergedPdfBytes = await mergedPdf.save();
+                
+                // Convert to blob and create object URL
+                const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+                
+                // Revoke previous URL if it exists
+                if (currentPdfUrl) {
+                    URL.revokeObjectURL(currentPdfUrl);
+                }
+                
+                // Create new URL for the PDF
+                currentPdfUrl = URL.createObjectURL(blob);
+                
+                // Replace the download button entirely to remove any previous event listeners
+                const buttonContainer = document.querySelector('.flex.flex-wrap.gap-4.mb-4');
+                const oldDownloadBtn = document.getElementById('downloadBtn');
+                
+                // Create a completely new download button
+                const newDownloadBtn = document.createElement('a');
+                newDownloadBtn.id = 'downloadBtn';
+                newDownloadBtn.href = currentPdfUrl;
+                newDownloadBtn.setAttribute('download', `combined_${new Date().toISOString().slice(0, 10)}.pdf`);
+                newDownloadBtn.className = 'flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors duration-300';
+                newDownloadBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download PDF
+                `;
+                
+                // Replace the old button with the new one
+                buttonContainer.replaceChild(newDownloadBtn, oldDownloadBtn);
+                
+                // Display the PDF using PDF.js
+                renderPdf(currentPdfUrl);
+                resultContainer.classList.remove('hidden');
+                
+                // Hide progress after a delay
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error combining PDFs:', error);
+                alert('An error occurred while combining PDFs. Please try again.');
+                progressContainer.classList.add('hidden');
+            }
+        }
+
+        // Read file as ArrayBuffer
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        // Render PDF using PDF.js
+        async function renderPdf(url) {
+            try {
+                const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
+                
+                // Clear previous content
+                pdfCanvasContainer.innerHTML = '';
+                
+                // Create a new loading indicator
+                const loadingText = document.createElement('p');
+                loadingText.id = 'loadingText';
+                loadingText.className = 'text-center py-8 flex items-center justify-center';
+                loadingText.innerHTML = `
+                    <span class="loading-spinner mr-3"></span>
+                    Loading PDF...
+                `;
+                pdfCanvasContainer.appendChild(loadingText);
+                
+                // Load the PDF
+                const loadingTask = pdfjsLib.getDocument(url);
+                const pdf = await loadingTask.promise;
+                
+                // Remove loading indicator
+                pdfCanvasContainer.removeChild(loadingText);
+                
+                // Get total number of pages
+                const numPages = pdf.numPages;
+                
+                // Set scale based on viewer width
+                const viewerWidth = document.getElementById('pdfViewer').clientWidth - 40; // Subtract padding
+                const scale = 1.0;
+                
+                // Render each page
+                for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                    // Create page container
+                    const pageContainer = document.createElement('div');
+                    pageContainer.className = 'page-container mb-4';
+                    
+                    // Create page number indicator
+                    const pageIndicator = document.createElement('div');
+                    pageIndicator.className = 'page-indicator text-sm text-center mb-2 text-gray-500 dark:text-gray-400';
+                    pageIndicator.textContent = `Page ${pageNum} of ${numPages}`;
+                    pageContainer.appendChild(pageIndicator);
+                    
+                    // Create canvas for the page
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'pdf-page-canvas shadow-md';
+                    pageContainer.appendChild(canvas);
+                    
+                    // Get the page
+                    const page = await pdf.getPage(pageNum);
+                    
+                    // Get viewport
+                    const viewport = page.getViewport({ scale });
+                    
+                    // Calculate scale to fit width
+                    const widthScale = viewerWidth / viewport.width;
+                    const scaledViewport = page.getViewport({ scale: widthScale });
+                    
+                    // Set canvas dimensions
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+                    
+                    // Render the page
+                    const renderContext = {
+                        canvasContext: canvas.getContext('2d'),
+                        viewport: scaledViewport
+                    };
+                    
+                    await page.render(renderContext).promise;
+                    pdfCanvasContainer.appendChild(pageContainer);
+                }
+                
+                // Scroll to top
+                document.getElementById('pdfViewer').scrollTop = 0;
+                
+            } catch (error) {
+                console.error('Error rendering PDF:', error);
+                const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
+                pdfCanvasContainer.innerHTML = `
+                    <div class="py-8 text-center text-red-500">
+                        <p>Error loading PDF. Please try again.</p>
+                        <p class="text-sm mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Add these new event listeners after the existing ones
+        const dropZone = document.getElementById('dropZone');
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        // Highlight drop zone when dragging over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            dropZone.classList.add('bg-gray-100', 'dark:bg-gray-700');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('bg-gray-100', 'dark:bg-gray-700');
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            // Create a new FileList-like object
+            const fileInput = document.getElementById('fileInput');
+            fileInput.files = files;
+            
+            // Trigger the file selection handler
+            const event = new Event('change');
+            fileInput.dispatchEvent(event);
+        }
+    </script>
+</body>
+</html>
