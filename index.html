@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Combiner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1"></script>
     <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -13,114 +16,87 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#5D5CDE',
+                        primary: '#F25F4C',
+                    },
+                    fontFamily: {
+                        display: ['"Bricolage Grotesque"', 'sans-serif'],
+                        mono: ['"DM Mono"', 'monospace'],
                     }
                 }
             }
         }
     </script>
-    <style>
-        .pdf-item {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .dark .pdf-preview {
-            filter: invert(0.9) hue-rotate(180deg);
-        }
-
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 3px solid #5D5CDE;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .dark .loading-spinner {
-            border-color: rgba(30, 30, 30, 0.3);
-            border-top-color: #5D5CDE;
-        }
-    </style>
 </head>
-<body class="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200">
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 class="text-3xl font-bold text-center mb-8 text-primary">PDF Combiner</h1>
-        
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
-            <div id="dropZone" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg py-8 px-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-primary mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p class="text-lg font-medium mb-2">Click to select PDF files</p>
-                <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">or drag and drop files here</p>
+<body class="min-h-screen bg-[#f2eee4] px-6 py-10 font-display text-[#0f1d2b] dark:bg-[#050608] dark:text-[#f2f1ed]">
+    <div class="fixed inset-0 -z-10">
+        <div class="absolute inset-0 opacity-80 bg-[radial-gradient(circle_at_1px_1px,_rgba(15,29,43,0.08)_1px,_transparent_0)] bg-[length:12px_12px] dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(242,241,237,0.08)_1px,_transparent_0)]"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(120deg,rgba(242,95,76,0.08),transparent_60%)] dark:bg-[linear-gradient(120deg,rgba(242,95,76,0.15),transparent_65%)]"></div>
+    </div>
+    <main class="relative mx-auto max-w-5xl space-y-6">
+        <header class="space-y-3">
+            <p class="text-[0.7rem] uppercase tracking-[0.3em] text-black/60 dark:text-white/60">DEVELOPED BY BC</p>
+            <h1 class="text-4xl font-semibold leading-tight sm:text-5xl">PDF Combiner</h1>
+            <p class="max-w-2xl text-base text-black/70 dark:text-white/70">Bind scattered pages without shipping data anywhere. Everything happens locally, then you carry the stitched folio away.</p>
+        </header>
+
+        <section class="rounded-[30px] border border-black/10 bg-[#f8f1e3] p-8 shadow-[0_15px_40px_rgba(5,5,5,0.08)] dark:border-white/10 dark:bg-[#111922]">
+            <div id="dropZone" class="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-black/20 bg-white/60 px-6 py-12 text-center dark:border-white/20 dark:bg-white/5">
+                <span class="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-black/30 font-mono text-5xl leading-none dark:border-white/20">+</span>
+                <p class="text-2xl font-medium">Drop PDFs or browse</p>
+                <p class="mt-2 text-sm text-black/60 dark:text-white/60">Stack multiple documents, arrange them, then stitch.</p>
                 <input type="file" id="fileInput" accept=".pdf" multiple class="hidden">
-                <button id="selectFilesBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition duration-300">
-                    Select PDF Files
+                <button id="selectFilesBtn" class="mt-6 inline-flex items-center justify-center rounded-full border border-transparent bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white">
+                    Load PDFs
                 </button>
             </div>
-        </div>
-        
-        <div id="fileList" class="mb-8 hidden">
-            <h2 class="text-xl font-semibold mb-4">Selected Files</h2>
-            <div id="selectedFiles" class="space-y-3 mb-6"></div>
-            
-            <div class="flex flex-wrap gap-3 justify-center mt-6">
-                <button id="combineBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Combine PDFs
+        </section>
+
+        <section id="fileList" class="hidden rounded-[30px] border border-black/10 bg-[#fff9f2]/90 p-8 shadow-[0_10px_40px_rgba(5,5,5,0.08)] dark:border-white/10 dark:bg-[#0f1419]">
+            <div class="space-y-1">
+                <p class="text-[0.7rem] font-mono uppercase tracking-[0.3em] text-black/50 dark:text-white/50">Queue</p>
+                <h2 class="text-2xl font-semibold">Selected files</h2>
+            </div>
+            <div id="selectedFiles" class="mt-6 space-y-4"></div>
+
+            <div class="mt-6 flex flex-wrap gap-3">
+                <button id="combineBtn" class="inline-flex items-center justify-center rounded-full border border-transparent bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(242,95,76,0.35)] disabled:opacity-40" disabled>
+                    Merge
                 </button>
-                <button id="clearBtn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition duration-300">
-                    Clear All
+                <button id="clearBtn" class="inline-flex items-center justify-center rounded-full border border-black/20 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-black/70 dark:border-white/20 dark:text-white/70">
+                    Clear
                 </button>
             </div>
-        </div>
-        
-        <div id="progressContainer" class="hidden mb-8">
-            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-2">
-                <div id="progressBar" class="bg-primary h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </section>
+
+        <section id="progressContainer" class="hidden rounded-[30px] border border-black/10 bg-white/70 p-6 dark:border-white/10 dark:bg-white/5">
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/20">
+                <div id="progressBar" class="h-full w-0 bg-primary"></div>
             </div>
-            <p id="progressText" class="text-sm text-center">Processing: 0%</p>
-        </div>
-        
-        <div id="resultContainer" class="hidden">
-            <h2 class="text-xl font-semibold mb-4">Combined PDF</h2>
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
-                <div id="pdfViewer" class="w-full h-[500px] border border-gray-300 dark:border-gray-600 rounded-lg overflow-auto mb-4 bg-white dark:bg-gray-700">
-                    <div id="pdfCanvasContainer" class="flex flex-col items-center p-4">
-                        <!-- PDF pages will be rendered here -->
-                        <p id="loadingText" class="text-center py-8 flex items-center">
-                            <span class="loading-spinner mr-3"></span>
-                            Loading PDF...
+            <p id="progressText" class="mt-4 font-mono text-[0.65rem] uppercase tracking-[0.4em] text-black/60 dark:text-white/60">Processing: 0%</p>
+        </section>
+
+        <section id="resultContainer" class="hidden rounded-[30px] border border-black/10 bg-white/80 p-8 shadow-[0_10px_30px_rgba(5,5,5,0.08)] dark:border-white/15 dark:bg-[#0f1419]">
+            <h2 class="text-2xl font-semibold">Combined PDF</h2>
+            <div class="mt-4 space-y-4">
+                <div id="pdfViewer" class="h-[520px] overflow-auto rounded-[30px] border border-black/10 bg-white/50 p-5 dark:border-white/15 dark:bg-white/5">
+                    <div id="pdfCanvasContainer" class="flex flex-col items-center gap-6">
+                        <p id="loadingText" class="flex items-center gap-2 font-mono text-sm uppercase tracking-[0.3em] text-black/60 dark:text-white/60">
+                            <span class="text-lg">✚</span>
+                            Waiting for pages
                         </p>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-4 mb-4">
-                    <a id="downloadBtn" href="#" class="flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors duration-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
+                <div class="flex flex-wrap gap-3" id="shareButtons">
+                    <a id="downloadBtn" href="#" class="inline-flex items-center justify-center rounded-full border border-transparent bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(242,95,76,0.35)]">
                         Download PDF
                     </a>
-                    <button id="printBtn" class="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        Print PDF
+                    <button id="printBtn" class="inline-flex items-center justify-center rounded-full border border-black/20 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-black/70 dark:border-white/20 dark:text-white/70">
+                        Open in new tab
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script>
         // Detect dark mode
@@ -199,37 +175,21 @@ const pdfjsLib = window.pdfjsLib;
                 const file = pdfFiles[index];
                 
                 const fileItem = document.createElement('div');
-                fileItem.className = 'flex flex-wrap items-center bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm pdf-item';
+                fileItem.className = 'flex flex-wrap items-center gap-4 rounded-[18px] border border-black/10 bg-white/70 px-4 py-3 text-sm dark:border-white/15 dark:bg-white/5';
                 fileItem.innerHTML = `
-                    <div class="flex items-center flex-grow min-w-0 mr-2">
-                        <span class="bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-200 p-2 rounded-md mr-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </span>
-                        <div class="min-w-0">
-                            <p class="text-sm font-medium truncate">${file.name}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">${formatFileSize(file.size)}</p>
-                        </div>
+                    <span class="flex h-10 w-10 items-center justify-center rounded-lg border border-black/15 bg-primary/15 text-primary dark:border-white/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate font-medium">${file.name}</p>
+                        <p class="text-xs text-black/60 dark:text-white/60">${formatFileSize(file.size)}</p>
                     </div>
-                    <div class="flex items-center space-x-2 mt-2 sm:mt-0">
-                        <div class="flex">
-                            <button class="move-up-btn p-1 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary rounded-full ${orderIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${orderIndex === 0 ? 'disabled' : ''}>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                                </svg>
-                            </button>
-                            <button class="move-down-btn p-1 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary rounded-full ${orderIndex === pdfOrder.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${orderIndex === pdfOrder.length - 1 ? 'disabled' : ''}>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                        </div>
-                        <button class="remove-btn p-1 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
+                    <div class="flex items-center gap-2">
+                        <button class="move-up-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-xs font-semibold uppercase tracking-[0.2em] text-black/60 disabled:opacity-30 dark:border-white/15 dark:text-white/60" ${orderIndex === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
+                        <button class="move-down-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-xs font-semibold uppercase tracking-[0.2em] text-black/60 disabled:opacity-30 dark:border-white/15 dark:text-white/60" ${orderIndex === pdfOrder.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button>
+                        <button class="remove-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-base font-semibold text-black/60 hover:text-primary dark:border-white/15 dark:text-white/60" aria-label="Remove file">×</button>
                     </div>
                 `;
                 
@@ -346,7 +306,7 @@ const pdfjsLib = window.pdfjsLib;
                 currentPdfUrl = URL.createObjectURL(blob);
                 
                 // Replace the download button entirely to remove any previous event listeners
-                const buttonContainer = document.querySelector('.flex.flex-wrap.gap-4.mb-4');
+                const buttonContainer = document.getElementById('shareButtons');
                 const oldDownloadBtn = document.getElementById('downloadBtn');
                 
                 // Create a completely new download button
@@ -354,13 +314,8 @@ const pdfjsLib = window.pdfjsLib;
                 newDownloadBtn.id = 'downloadBtn';
                 newDownloadBtn.href = currentPdfUrl;
                 newDownloadBtn.setAttribute('download', `combined_${new Date().toISOString().slice(0, 10)}.pdf`);
-                newDownloadBtn.className = 'flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors duration-300';
-                newDownloadBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download PDF
-                `;
+                newDownloadBtn.className = 'inline-flex items-center justify-center rounded-full border border-transparent bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(242,95,76,0.35)]';
+                newDownloadBtn.textContent = 'Download PDF';
                 
                 // Replace the old button with the new one
                 buttonContainer.replaceChild(newDownloadBtn, oldDownloadBtn);
@@ -402,9 +357,9 @@ const pdfjsLib = window.pdfjsLib;
                 // Create a new loading indicator
                 const loadingText = document.createElement('p');
                 loadingText.id = 'loadingText';
-                loadingText.className = 'text-center py-8 flex items-center justify-center';
+                loadingText.className = 'flex items-center gap-2 font-mono text-sm uppercase tracking-[0.3em] text-black/60 dark:text-white/60';
                 loadingText.innerHTML = `
-                    <span class="loading-spinner mr-3"></span>
+                    <span class="text-lg">⌁</span>
                     Loading PDF...
                 `;
                 pdfCanvasContainer.appendChild(loadingText);
@@ -427,17 +382,17 @@ const pdfjsLib = window.pdfjsLib;
                 for (let pageNum = 1; pageNum <= numPages; pageNum++) {
                     // Create page container
                     const pageContainer = document.createElement('div');
-                    pageContainer.className = 'page-container mb-4';
+                    pageContainer.className = 'w-full space-y-2';
                     
                     // Create page number indicator
                     const pageIndicator = document.createElement('div');
-                    pageIndicator.className = 'page-indicator text-sm text-center mb-2 text-gray-500 dark:text-gray-400';
+                    pageIndicator.className = 'font-mono text-[0.7rem] uppercase tracking-[0.3em] text-black/60 dark:text-white/60 text-center';
                     pageIndicator.textContent = `Page ${pageNum} of ${numPages}`;
                     pageContainer.appendChild(pageIndicator);
                     
                     // Create canvas for the page
                     const canvas = document.createElement('canvas');
-                    canvas.className = 'pdf-page-canvas shadow-md';
+                    canvas.className = 'w-full rounded-2xl border border-black/10 bg-white shadow-[0_10px_30px_rgba(5,5,5,0.08)] dark:border-white/15 dark:bg-[#111922]';
                     pageContainer.appendChild(canvas);
                     
                     // Get the page
@@ -505,12 +460,14 @@ const pdfjsLib = window.pdfjsLib;
             e.stopPropagation();
         }
 
-        function highlight(e) {
-            dropZone.classList.add('bg-gray-100', 'dark:bg-gray-700');
+        function highlight() {
+            dropZone.style.borderColor = '#F25F4C';
+            dropZone.style.backgroundColor = 'rgba(242, 95, 76, 0.1)';
         }
 
-        function unhighlight(e) {
-            dropZone.classList.remove('bg-gray-100', 'dark:bg-gray-700');
+        function unhighlight() {
+            dropZone.style.borderColor = '';
+            dropZone.style.backgroundColor = '';
         }
 
         function handleDrop(e) {
