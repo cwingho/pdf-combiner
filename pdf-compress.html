@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Compressor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#F25F4C',
+                        accent: '#315659'
+                    },
+                    fontFamily: {
+                        display: ['"Bricolage Grotesque"', 'sans-serif'],
+                        mono: ['"DM Mono"', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-[#f2eee4] px-6 py-10 font-display text-[#0f1d2b] dark:bg-[#050608] dark:text-[#f2f1ed]">
+    <div class="fixed inset-0 -z-10">
+        <div class="absolute inset-0 opacity-80 bg-[radial-gradient(circle_at_1px_1px,_rgba(15,29,43,0.08)_1px,_transparent_0)] bg-[length:12px_12px] dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(242,241,237,0.08)_1px,_transparent_0)]"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(120deg,rgba(242,95,76,0.08),transparent_60%)] dark:bg-[linear-gradient(120deg,rgba(242,95,76,0.15),transparent_65%)]"></div>
+    </div>
+
+    <main class="relative mx-auto max-w-5xl space-y-6">
+        <nav class="flex flex-wrap items-center justify-between rounded-[24px] border border-black/10 bg-white/60 px-6 py-4 text-xs font-mono uppercase tracking-[0.3em] text-black/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
+            <span>PDF Atelier</span>
+            <div class="mt-3 flex flex-wrap gap-3 sm:mt-0">
+                <a data-nav="combine" href="index.html" class="nav-link inline-flex items-center justify-center rounded-full border border-black/15 bg-transparent px-4 py-2 text-[0.6rem] font-semibold tracking-[0.35em] text-black/70 transition-colors dark:border-white/20 dark:text-white/70">
+                    Combine
+                </a>
+                <a data-nav="compress" href="pdf-compress.html" class="nav-link inline-flex items-center justify-center rounded-full border border-black/15 bg-transparent px-4 py-2 text-[0.6rem] font-semibold tracking-[0.35em] text-black/70 transition-colors dark:border-white/20 dark:text-white/70">
+                    Compress
+                </a>
+            </div>
+        </nav>
+        <header class="space-y-3">
+            <p class="text-[0.7rem] uppercase tracking-[0.3em] text-black/60 dark:text-white/60">DEVELOPED BY BC</p>
+            <h1 class="text-4xl font-semibold leading-tight sm:text-5xl">PDF Compressor</h1>
+            <p class="max-w-2xl text-base text-black/70 dark:text-white/70">Strip heavy scans into lean sheets without shipping bytes anywhere. Everything happens locally, right in your browser.</p>
+        </header>
+
+        <section class="rounded-[30px] border border-black/10 bg-[#f8f1e3] p-8 dark:border-white/10 dark:bg-[#111922]">
+            <div id="dropZone" class="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-black/20 bg-white/60 px-6 py-12 text-center dark:border-white/20 dark:bg-white/5">
+                <span class="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-black/30 font-mono text-5xl leading-none dark:border-white/20">→</span>
+                <p class="text-2xl font-medium">Drop a PDF or browse</p>
+                <p class="mt-2 text-sm text-black/60 dark:text-white/60">Single document only. We'll redraw every page into lighter bitmaps.</p>
+                <input type="file" id="fileInput" accept=".pdf" class="hidden">
+                <button id="selectFilesBtn" class="mt-6 inline-flex items-center justify-center rounded-full border border-transparent bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white">
+                    Load PDF
+                </button>
+            </div>
+        </section>
+
+        <section id="settingsPanel" class="hidden rounded-[30px] border border-black/10 bg-[#fff9f2]/90 p-8 dark:border-white/10 dark:bg-[#0f1419]">
+            <div class="space-y-1">
+                <p class="text-[0.7rem] font-mono uppercase tracking-[0.3em] text-black/50 dark:text-white/50">Source</p>
+                <h2 class="text-2xl font-semibold">Loaded document</h2>
+            </div>
+            <div id="fileMeta" class="mt-4 flex flex-col gap-4 rounded-[20px] border border-black/10 bg-white/80 p-4 text-sm dark:border-white/15 dark:bg-white/5">
+                <div class="flex flex-col gap-2 text-black/70 dark:text-white/70 sm:flex-row sm:items-center sm:justify-between">
+                    <span id="fileName" class="font-medium break-words sm:max-w-[70%]"></span>
+                    <span id="fileSize" class="font-mono text-xs uppercase tracking-[0.2em] text-black/60 dark:text-white/60 sm:text-right"></span>
+                </div>
+                <div class="flex items-center justify-between text-black/60 dark:text-white/60">
+                    <span>Pages</span>
+                    <span id="pageCount" class="font-mono text-xs uppercase tracking-[0.2em]">—</span>
+                </div>
+            </div>
+
+            <div class="mt-6 grid gap-6 md:grid-cols-2">
+                <div class="rounded-[20px] border border-black/10 bg-white/80 p-5 dark:border-white/15 dark:bg-white/5">
+                    <p class="text-xs font-mono uppercase tracking-[0.3em] text-black/50 dark:text-white/50">Detail vs size</p>
+                    <h3 class="mt-2 text-lg font-semibold">Render quality</h3>
+                    <input id="qualitySlider" type="range" min="0.3" max="0.9" step="0.1" value="0.6" class="mt-6 w-full accent-primary">
+                    <p class="mt-3 text-sm text-black/70 dark:text-white/70">JPEG quality: <span id="qualityLabel" class="font-mono text-xs uppercase tracking-[0.2em]">0.6</span></p>
+                </div>
+                <div class="rounded-[20px] border border-black/10 bg-white/80 p-5 dark:border-white/15 dark:bg-white/5">
+                    <p class="text-xs font-mono uppercase tracking-[0.3em] text-black/50 dark:text-white/50">Canvas resolution</p>
+                    <h3 class="mt-2 text-lg font-semibold">Render scale</h3>
+                    <input id="scaleSlider" type="range" min="0.7" max="1.4" step="0.1" value="1.0" class="mt-6 w-full accent-primary">
+                    <p class="mt-3 text-sm text-black/70 dark:text-white/70">Scale multiplier: <span id="scaleLabel" class="font-mono text-xs uppercase tracking-[0.2em]">1.0×</span></p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-3">
+                <button id="compressBtn" class="inline-flex items-center justify-center rounded-full border border-transparent bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-40" disabled>
+                    Compress
+                </button>
+                <button id="clearBtn" class="inline-flex items-center justify-center rounded-full border border-black/20 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-black/70 dark:border-white/20 dark:text-white/70">
+                    Clear
+                </button>
+            </div>
+        </section>
+
+        <section id="progressContainer" class="hidden rounded-[30px] border border-black/10 bg-white/70 p-6 dark:border-white/10 dark:bg-white/5">
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/20">
+                <div id="progressBar" class="h-full w-0 bg-primary"></div>
+            </div>
+            <p id="progressText" class="mt-4 font-mono text-[0.65rem] uppercase tracking-[0.4em] text-black/60 dark:text-white/60">Processing: 0%</p>
+        </section>
+
+        <section id="resultContainer" class="hidden rounded-[30px] border border-black/10 bg-white/80 p-8 dark:border-white/15 dark:bg-[#0f1419]">
+            <h2 class="text-2xl font-semibold">Compressed output</h2>
+            <div class="mt-4 grid gap-6 md:grid-cols-2">
+                <div class="rounded-[20px] border border-black/10 bg-white/70 p-5 text-sm dark:border-white/15 dark:bg-white/5">
+                    <div class="flex items-center justify-between text-black/70 dark:text-white/70">
+                        <span>Original size</span>
+                        <span id="originalSize" class="font-mono text-xs uppercase tracking-[0.2em]">—</span>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between text-black/70 dark:text-white/70">
+                        <span>Compressed size</span>
+                        <span id="compressedSize" class="font-mono text-xs uppercase tracking-[0.2em]">—</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3" id="resultButtons">
+                    <a id="downloadBtn" href="#" class="inline-flex items-center justify-center rounded-full border border-transparent bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white">
+                        Download PDF
+                    </a>
+                    <button id="previewBtn" class="inline-flex items-center justify-center rounded-full border border-black/20 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-black/70 dark:border-white/20 dark:text-white/70">
+                        Open in new tab
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        const pdfjsLib = window.pdfjsLib;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        const PDFLib = window.PDFLib;
+
+        const navLinks = document.querySelectorAll('[data-nav]');
+        const currentNav = window.location.pathname.includes('pdf-compress') ? 'compress' : 'combine';
+        const navActiveClasses = ['bg-primary', 'text-white', 'border-transparent', 'dark:text-white'];
+        const navInactiveClasses = ['bg-transparent', 'border-black/15', 'dark:border-white/20', 'text-black/70', 'dark:text-white/70'];
+
+        navLinks.forEach(link => {
+            const isActive = link.dataset.nav === currentNav;
+            if (isActive) {
+                navActiveClasses.forEach(cls => link.classList.add(cls));
+                navInactiveClasses.forEach(cls => link.classList.remove(cls));
+                link.setAttribute('aria-current', 'page');
+            } else {
+                navInactiveClasses.forEach(cls => link.classList.add(cls));
+                navActiveClasses.forEach(cls => link.classList.remove(cls));
+                link.removeAttribute('aria-current');
+            }
+        });
+
+        const fileInput = document.getElementById('fileInput');
+        const selectFilesBtn = document.getElementById('selectFilesBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const compressBtn = document.getElementById('compressBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const qualitySlider = document.getElementById('qualitySlider');
+        const scaleSlider = document.getElementById('scaleSlider');
+        const qualityLabel = document.getElementById('qualityLabel');
+        const scaleLabel = document.getElementById('scaleLabel');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const resultContainer = document.getElementById('resultContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewBtn = document.getElementById('previewBtn');
+
+        const fileNameEl = document.getElementById('fileName');
+        const fileSizeEl = document.getElementById('fileSize');
+        const pageCountEl = document.getElementById('pageCount');
+        const originalSizeEl = document.getElementById('originalSize');
+        const compressedSizeEl = document.getElementById('compressedSize');
+
+        let pdfFile = null;
+        let currentPdfUrl = null;
+        let loadedPageCount = 0;
+
+        selectFilesBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelection);
+        qualitySlider.addEventListener('input', () => {
+            qualityLabel.textContent = Number(qualitySlider.value).toFixed(1);
+        });
+        scaleSlider.addEventListener('input', () => {
+            scaleLabel.textContent = `${Number(scaleSlider.value).toFixed(1)}×`;
+        });
+        clearBtn.addEventListener('click', clearFile);
+        compressBtn.addEventListener('click', compressPdf);
+
+        previewBtn.addEventListener('click', () => {
+            if (currentPdfUrl) {
+                window.open(currentPdfUrl, '_blank', 'noopener,noreferrer');
+            }
+        });
+
+        async function handleFileSelection(event) {
+            const file = event.target.files[0];
+
+            if (!file || file.type !== 'application/pdf') {
+                return;
+            }
+
+            pdfFile = file;
+            fileNameEl.textContent = file.name;
+            fileNameEl.title = file.name;
+            const formattedSize = formatFileSize(file.size);
+            fileSizeEl.textContent = formattedSize;
+            fileSizeEl.title = formattedSize;
+            originalSizeEl.textContent = formatFileSize(file.size);
+            compressedSizeEl.textContent = '—';
+            compressBtn.disabled = true;
+            pageCountEl.textContent = 'Parsing…';
+            settingsPanel.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+
+            try {
+                const arrayBuffer = await readFileAsArrayBuffer(file);
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                loadedPageCount = pdf.numPages;
+                pageCountEl.textContent = pdf.numPages;
+                compressBtn.disabled = false;
+            } catch (error) {
+                pageCountEl.textContent = 'Error';
+                console.error('Unable to read PDF:', error);
+            }
+        }
+
+        function clearFile() {
+            pdfFile = null;
+            fileInput.value = '';
+            settingsPanel.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+            compressBtn.disabled = true;
+            fileNameEl.textContent = '';
+            fileNameEl.removeAttribute('title');
+            fileSizeEl.textContent = '';
+            fileSizeEl.removeAttribute('title');
+            pageCountEl.textContent = '—';
+            if (currentPdfUrl) {
+                URL.revokeObjectURL(currentPdfUrl);
+                currentPdfUrl = null;
+            }
+        }
+
+        async function compressPdf() {
+            if (!pdfFile) return;
+
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Processing: 0%';
+            compressBtn.disabled = true;
+
+            try {
+                const quality = Number(qualitySlider.value);
+                const scaleMultiplier = Number(scaleSlider.value);
+                const sourceBytes = await readFileAsArrayBuffer(pdfFile);
+                const loadingTask = pdfjsLib.getDocument({ data: sourceBytes });
+                const pdf = await loadingTask.promise;
+                const targetPdf = await PDFLib.PDFDocument.create();
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex++) {
+                    const page = await pdf.getPage(pageIndex);
+                    const baseViewport = page.getViewport({ scale: 1 });
+                    const scaledViewport = page.getViewport({ scale: scaleMultiplier });
+
+                    canvas.width = Math.floor(scaledViewport.width);
+                    canvas.height = Math.floor(scaledViewport.height);
+
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: scaledViewport,
+                    }).promise;
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    const imageBytes = dataUrlToUint8Array(dataUrl);
+                    const embeddedImage = await targetPdf.embedJpg(imageBytes);
+                    const targetPage = targetPdf.addPage([baseViewport.width, baseViewport.height]);
+                    targetPage.drawImage(embeddedImage, {
+                        x: 0,
+                        y: 0,
+                        width: baseViewport.width,
+                        height: baseViewport.height,
+                    });
+
+                    const progress = Math.round((pageIndex / pdf.numPages) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `Processing: ${progress}%`;
+                }
+
+                const outputBytes = await targetPdf.save();
+                const blob = new Blob([outputBytes], { type: 'application/pdf' });
+
+                if (currentPdfUrl) {
+                    URL.revokeObjectURL(currentPdfUrl);
+                }
+
+                currentPdfUrl = URL.createObjectURL(blob);
+                downloadBtn.href = currentPdfUrl;
+                downloadBtn.setAttribute('download', `compressed_${new Date().toISOString().slice(0, 10)}.pdf`);
+                compressedSizeEl.textContent = formatFileSize(blob.size);
+                resultContainer.classList.remove('hidden');
+
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                }, 400);
+            } catch (error) {
+                console.error('Compression failed:', error);
+                alert('Unable to compress this PDF. Try another file or adjust the sliders.');
+                progressContainer.classList.add('hidden');
+            } finally {
+                compressBtn.disabled = false;
+            }
+        }
+
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function dataUrlToUint8Array(dataUrl) {
+            const base64 = dataUrl.split(',')[1];
+            const binary = atob(base64);
+            const len = binary.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+        }
+
+        const dropZone = document.getElementById('dropZone');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight() {
+            dropZone.style.borderColor = '#F25F4C';
+            dropZone.style.backgroundColor = 'rgba(242, 95, 76, 0.1)';
+        }
+
+        function unhighlight() {
+            dropZone.style.borderColor = '';
+            dropZone.style.backgroundColor = '';
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length) {
+                fileInput.files = files;
+                const changeEvent = new Event('change');
+                fileInput.dispatchEvent(changeEvent);
+            }
+        }
+    </script>
+</body>
+</html>
+
